@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Container, Row, Col, Table } from 'react-bootstrap';
+import { Container, Row, Col, Table, Pagination } from 'react-bootstrap';
 
 export default function User() {
   const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageItems, setPageItems]=useState([]);
+  const [pageItems, setPageItems] = useState([]);
 
   useEffect(() => {
     loadUsers();
@@ -14,8 +14,20 @@ export default function User() {
     fetch(`http://localhost:8080/api/users?page=${currentPage - 1}`)
       .then((res) => res.json())
       .then((result) => {
-        console.log(result.content);
         setUsers(result.content);
+        let items = [];
+        for (let index = 1; index <= result.totalPages; index++) {
+          items.push(
+            <Pagination.Item
+              key={index}
+              active={currentPage === index}
+              onClick={() => setCurrentPage(index)}
+            >
+              {index}
+            </Pagination.Item>
+          );
+          setPageItems(items);
+        }
       });
   }
 
@@ -46,6 +58,7 @@ export default function User() {
                 ))}
               </tbody>
             </Table>
+            <Pagination>{pageItems}</Pagination>
           </Col>
           <Col sm={4}>
             <h1>Form</h1>
