@@ -1,10 +1,32 @@
 import { useEffect, useState } from 'react';
-import { Container, Row, Col, Table, Pagination } from 'react-bootstrap';
+import {
+  Container,
+  Row,
+  Col,
+  Table,
+  Pagination,
+  Form,
+  Button,
+  Alert,
+  Modal,
+  ModalTitle,
+} from 'react-bootstrap';
 
 export default function User() {
   const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState({
+    identityNo: '',
+    name: '',
+    surname: '',
+    gender: '',
+    role: '',
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageItems, setPageItems] = useState([]);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [show, setShow] = useState(false);
+  const handleShow = () => setShow(true);
+  const handleClose = () => setShow(false);
 
   useEffect(() => {
     loadUsers();
@@ -31,6 +53,60 @@ export default function User() {
       });
   }
 
+  function clearForm() {
+    setSelectedUser({
+      identityNo: '',
+      name: '',
+      surname: '',
+      gender: '',
+      role: '',
+    });
+  }
+
+  function isNotClear() {
+    return (
+      selectedUser.identityNo !== '' ||
+      selectedUser.name !== '' ||
+      selectedUser.surname !== '' ||
+      selectedUser.gender !== '' ||
+      selectedUser.role !== ''
+    );
+  }
+
+  function handleInputChange(e) {
+    const { name, value } = e.target;
+    setSelectedUser({ ...selectedUser, [name]: value });
+  }
+
+  function saveUser() {
+    fetch('http://localhost:8080/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      mode: 'cors',
+      body: JSON.stringify(selectedUser),
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.errorMessage) {
+          setErrorMessage(result.errorMessage);
+        } else {
+          loadUsers();
+          clearForm();
+          setErrorMessage(null);
+        }
+      });
+  }
+
+  function deleteUser() {
+    fetch(`http://localhost:8080/api/users/${selectedUser.id}`, {
+      method: 'DELETE',
+    }).then(() => {
+      loadUsers();
+      clearForm();
+      handleClose();
+    });
+  }
+
   return (
     <>
       <Container>
@@ -48,7 +124,12 @@ export default function User() {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} onClick={() => {}}>
+                  <tr
+                    key={user.id}
+                    onClick={() => {
+                      setSelectedUser(user);
+                    }}
+                  >
                     <td>{user.identityNo}</td>
                     <td>{user.name}</td>
                     <td>{user.surname}</td>
@@ -61,9 +142,117 @@ export default function User() {
             <Pagination>{pageItems}</Pagination>
           </Col>
           <Col sm={4}>
-            <h1>Form</h1>
+            <Form>
+              {errorMessage ? (
+                <Alert key='danger' variant='danger'>
+                  {errorMessage}
+                </Alert>
+              ) : (
+                ' '
+              )}
+              <Form.Group className='mb-3' controlId='identityNo'>
+                <Form.Label>Identity No</Form.Label>
+                <Form.Control
+                  type='text'
+                  autoComplete='off'
+                  placeholder='Identity No'
+                  name='identityNo'
+                  maxLength={'11'}
+                  value={selectedUser.identityNo}
+                  onChange={(e) => handleInputChange(e)}
+                />
+              </Form.Group>
+              <Form.Group className='mb-3' controlId='name'>
+                <Form.Label>Name</Form.Label>
+                <Form.Control
+                  type='text'
+                  autoComplete='off'
+                  placeholder='Name'
+                  name='name'
+                  maxLength={'11'}
+                  value={selectedUser.name}
+                  onChange={(e) => handleInputChange(e)}
+                />
+              </Form.Group>
+              <Form.Group className='mb-3' controlId='surname'>
+                <Form.Label>Surname</Form.Label>
+                <Form.Control
+                  type='text'
+                  autoComplete='off'
+                  placeholder='Surname'
+                  name='surname'
+                  maxLength={'11'}
+                  value={selectedUser.surname}
+                  onChange={(e) => handleInputChange(e)}
+                />
+              </Form.Group>
+              <Form.Group className='mb-3' controlId='gender'>
+                <Form.Label>Gender</Form.Label>
+                <Form.Select
+                  aria-label='Please select gender'
+                  value={selectedUser.gender}
+                  name='gender'
+                  onChange={(e) => handleInputChange(e)}
+                >
+                  <option>Please select gender</option>
+                  <option value='MALE'>Male</option>
+                  <option value='FEMALE'>Female</option>
+                </Form.Select>
+              </Form.Group>
+              <Form.Group className='mb-3' controlId='role'>
+                <Form.Label>Role</Form.Label>
+                <Form.Select
+                  aria-label='Please select role'
+                  value={selectedUser.role}
+                  name='role'
+                  onChange={(e) => handleInputChange(e)}
+                >
+                  <option>Please select role</option>
+                  <option value='STUDENT'>Student</option>
+                  <option value='TEACHER'>Teacher</option>
+                </Form.Select>
+              </Form.Group>
+              <Button
+                variant='primary'
+                disabled={!isNotClear()}
+                type='button'
+                onClick={saveUser}
+              >
+                {selectedUser.id ? 'Update' : 'Create'}
+              </Button>{' '}
+              {isNotClear() ? (
+                <>
+                  <Button
+                    variant='outline-primary'
+                    type='button'
+                    onClick={clearForm}
+                  >
+                    Clear
+                  </Button>{' '}
+                  <Button variant='danger' type='button' onClick={handleShow}>
+                    Delete
+                  </Button>
+                </>
+              ) : (
+                ''
+              )}
+            </Form>
           </Col>
         </Row>
+        <Modal show={show} onHide={handleClose}>
+          <Modal.Header closeButton>
+            <ModalTitle>Delete</ModalTitle>
+          </Modal.Header>
+          <Modal.Body>Are you sure?</Modal.Body>
+          <Modal.Footer>
+            <Button variant='secondary' onClick={handleClose}>
+              Close
+            </Button>
+            <Button variant='danger' onClick={deleteUser}>
+              Delete
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Container>
     </>
   );
