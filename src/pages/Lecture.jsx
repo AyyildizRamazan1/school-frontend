@@ -31,12 +31,12 @@ export default function Lecture() {
     loadTeachers();
   }, [currentPage]);
 
-  function loadLectureStudents() {
+  function loadLectureStudents(lecture) {
     fetch('http://localhost:8080/api/users/potential-students', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       mode: 'cors',
-      body: JSON.stringify(selectedLecture.students.map((st) => st.id)),
+      body: JSON.stringify(lecture.students.map((st) => st.id)),
     })
       .then((res) => res.json())
       .then((result) => {
@@ -129,7 +129,7 @@ export default function Lecture() {
       clearForm();
     } else {
       lecture.teacherId = lecture.teacher.id;
-      loadLectureStudents();
+      loadLectureStudents(lecture);
       setSelectedLecture(lecture);
     }
   }
