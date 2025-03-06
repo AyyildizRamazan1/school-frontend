@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   ModalTitle,
+  ListGroup,
 } from 'react-bootstrap';
 
 export default function Lecture() {
@@ -29,6 +30,19 @@ export default function Lecture() {
     loadLectures();
     loadTeachers();
   }, [currentPage]);
+
+  function loadLectureStudents() {
+    fetch('http://localhost:8080/api/users/potential-students', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      mode: 'cors',
+      body: JSON.stringify(selectedLecture.students.map((st) => st.id)),
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        setLectureStudents(result);
+      });
+  }
 
   function loadLectures() {
     fetch(`http://localhost:8080/api/lectures?page=${currentPage - 1}`)
@@ -65,6 +79,78 @@ export default function Lecture() {
     setLectureStudents([]);
   }
 
+  function createLecture() {
+    const lecture = {
+      name: selectedLecture.name,
+      teacher: {
+        id: Number(selectedLecture.teacherId),
+      },
+    };
+    fetch('http://localhost:8080/api/lectures', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      mode: 'cors',
+      body: JSON.stringify(lecture),
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        loadLectures();
+        clearForm();
+      });
+  }
+
+  function clearForm() {
+    setSelectedLecture({
+      name: '',
+      teacherId: 0,
+      teacher: {},
+      students: [],
+    });
+    setLectureStudents([]);
+  }
+
+  function addStudent(student) {
+    selectedLecture.students.push(student);
+    fetch('http://localhost:8080/api/lectures', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      mode: 'cors',
+      body: JSON.stringify(selectedLecture),
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        loadLectures();
+        clearForm();
+      });
+  }
+
+  function setLecture(lecture) {
+    if (lecture.id === selectedLecture.id) {
+      clearForm();
+    } else {
+      lecture.teacherId = lecture.teacher.id;
+      loadLectureStudents();
+      setSelectedLecture(lecture);
+    }
+  }
+
+  function removeStudent(studentId) {
+    selectedLecture.students = selectedLecture.students.filter(
+      (student) => student.id !== studentId
+    );
+    fetch('http://localhost:8080/api/lectures', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      mode: 'cors',
+      body: JSON.stringify(selectedLecture),
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        loadLectures();
+        clearForm();
+      });
+  }
+
   return (
     <>
       <Container>
@@ -84,7 +170,7 @@ export default function Lecture() {
                     <tr
                       key={lec.id}
                       onClick={() => {
-                        setSelectedLecture(lec);
+                        setLecture(lec);
                       }}
                     >
                       <td>{lec.id}</td>
@@ -102,7 +188,9 @@ export default function Lecture() {
                               <Button
                                 size='sm'
                                 variant='danger'
-                                onClick={() => {}}
+                                onClick={() => {
+                                  removeStudent(student.id);
+                                }}
                               >
                                 Remove
                               </Button>
@@ -116,7 +204,73 @@ export default function Lecture() {
             </Table>
             <Pagination>{pageItems}</Pagination>
           </Col>
-          <Col sm={3}></Col>
+          <Col sm={3}>
+            <Form>
+              <Form.Group className='mb-3' controlId='name'>
+                <Form.Label>Name</Form.Label>
+                <Form.Control
+                  type='text'
+                  autoComplete='off'
+                  placeholder='Name'
+                  name='name'
+                  maxLength={'11'}
+                  value={selectedLecture.name}
+                  onChange={(e) => handleInputChange(e)}
+                />
+              </Form.Group>
+              <Form.Group className='mb-3' controlId='teacherId'>
+                <Form.Label>Teacher</Form.Label>
+                <Form.Select
+                  aria-label='Please select teacher'
+                  name='teacherId'
+                  value={Number(selectedLecture.teacherId)}
+                  onChange={(e) => handleInputChange(e)}
+                >
+                  <option>Please select teacher</option>
+                  {teachers.map((teacher) => (
+                    <option value={teacher.id} key={teacher.id}>
+                      {teacher.name + ' ' + teacher.surname}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+              <Button variant='primary' type='button' onClick={createLecture}>
+                Create
+              </Button>{' '}
+              {selectedLecture.name !== '' ? (
+                <Button
+                  variant='outline-primary'
+                  type='button'
+                  onClick={clearForm}
+                >
+                  Clear
+                </Button>
+              ) : (
+                ''
+              )}
+            </Form>
+            <br />
+            <ListGroup as='ol' numbered>
+              {lectureStudents.map((student) => (
+                <ListGroup.Item
+                  as='li'
+                  className='d-flex justify-content-between align-items-start'
+                  key={student.id}
+                >
+                  <div className='ms-2 me-auto'>
+                    {student.name} {student.surname}
+                  </div>
+                  <Button
+                    variant='outline-primary'
+                    size='sm'
+                    onClick={() => addStudent(student)}
+                  >
+                    Add
+                  </Button>
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          </Col>
         </Row>
       </Container>
     </>
